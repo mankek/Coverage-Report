@@ -14,13 +14,14 @@ usage() {
 }
 
 add_genes() {
-	awk '{$2=++i FS $2;}1' $name"_ST.txt" > "test.txt"
 	echo "Chrom	Gene" > "genes.txt"
 	for f in $(awk '!/^Chrom/ {print $2} ' $name"_ST.txt")
 	do
-		awk -v pos="$f" '{ if ($2 <= pos && $3 >= pos) print $1 "\t" $4}' $bed >> "genes.txt"
+		awk -v pos="$f" '{ if ($2 <= pos && $3 >= pos) print $1"\t"$4 }' $bed >> "genes.txt"
 	done
-	join -1 1 -2 1 "genes.txt" "test.txt" > "test2.txt"
+	join -1 1 -2 1 -o 1.1,1.2,2.2,2.3 -t $'\t' <(sort -r "genes.txt") <(sort -r $name"_ST.txt") > $name"_ST_withgenes.txt"
+	rm "genes.txt"
+	rm $name"_ST.txt"
 }
 
 while getopts "hi:a:l:gsb" optchar;
@@ -44,7 +45,7 @@ do
 			;;
                 s)
 			echo "Chrom	Pos	Cov_depth" > $name"_ST.txt"
-			samtools depth -b $bed $bam | awk -v lim="$limit" '{ if ($3 <= lim) print $0 }' >> $name"_ST.txt"
+			samtools depth -b $bed $bam | awk -v lim="$limit" 'BEGIN { FS = "\t" } ; { if ($3 <= lim) print $0 }' >> $name"_ST.txt"
 			if test $g_flag = "True"
 			then
 				add_genes
@@ -53,6 +54,10 @@ do
 		b)
 			echo "Chrom	Region_Start	Region_End	Gene	Pos	Cov_depth" > $name"_BT.txt"
 			bedtools coverage -a $bed -b $bam -d | awk -v lim="$limit" '$6 <= lim' >> $name"_BT.txt"
+			if test $g_flag = "True"
+			then
+				echo "The -g option is only applied if Samtools is used"
+			fi
 			;;
                 \?)
                         echo "Invalid option: -$OPTARG"
